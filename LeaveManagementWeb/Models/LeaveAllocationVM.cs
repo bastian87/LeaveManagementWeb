@@ -13,6 +13,7 @@ namespace LeaveManagementWeb.Models
         public int NumberOfDays { get; set; }
 
         [Required]
+        [Display(Name ="Allocation Period")]
         public int Period {get; set; }
         public LeaveTypeVM? LeaveType { get; set; }
     }
