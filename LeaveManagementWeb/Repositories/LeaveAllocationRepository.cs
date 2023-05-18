@@ -4,7 +4,9 @@ using LeaveManagementWeb.Constants;
 using LeaveManagementWeb.Contracts;
 using LeaveManagementWeb.Data;
 using LeaveManagementWeb.Models;
+using LeaveManagementWeb.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeaveManagementWeb.Repositories
@@ -14,14 +16,16 @@ namespace LeaveManagementWeb.Repositories
         private readonly ApplicationDbContext context;
         private readonly UserManager<Employee> userManager;
         private readonly ILeaveTypeRepository leaveTypeRepository;
+        private readonly IEmailSender emailSender;
         private readonly AutoMapper.IConfigurationProvider configurationProvider;
         private readonly IMapper mapper;
 
-        public LeaveAllocationRepository(ApplicationDbContext context, UserManager<Employee> userManager, ILeaveTypeRepository leaveTypeRepository, AutoMapper.IConfigurationProvider configurationProvider, IMapper mapper) : base(context)
+        public LeaveAllocationRepository(ApplicationDbContext context, UserManager<Employee> userManager, ILeaveTypeRepository leaveTypeRepository, IEmailSender emailSender, AutoMapper.IConfigurationProvider configurationProvider, IMapper mapper) : base(context)
         {
             this.context = context;
             this.userManager = userManager;
             this.leaveTypeRepository = leaveTypeRepository;
+            this.emailSender = emailSender;
             this.configurationProvider = configurationProvider;
             this.mapper = mapper;
         }
@@ -74,6 +78,7 @@ namespace LeaveManagementWeb.Repositories
             var period = DateTime.Now.Year;
             var leaveTypeDays = await leaveTypeRepository.GetAsync(leaveTypeId);
             var allocations = new List<LeaveAllocation>();
+            var employeeWithNewAllocations = new List<Employee>();
 
             foreach (var employee in employees)
             {
@@ -89,9 +94,17 @@ namespace LeaveManagementWeb.Repositories
                     Period = period,
                     NumberOfDays = leaveTypeDays.DefaultDays
                 });
+
+                employeeWithNewAllocations.Add(employee);
             }
 
             await AddRangeAsync(allocations);
+
+            foreach (var employee in employeeWithNewAllocations)
+            {                
+                await emailSender.SendEmailAsync(employee.Email, $"Leave Allocation Posted for {period}",
+                $"Your leave has been posted.");
+            }
         }
 
         public async Task<bool> UpdateEmployeeAllocation(LeaveAllocationEditVM model)

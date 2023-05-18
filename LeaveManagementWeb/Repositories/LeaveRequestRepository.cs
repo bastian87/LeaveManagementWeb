@@ -3,6 +3,7 @@ using LeaveManagementWeb.Contracts;
 using LeaveManagementWeb.Data;
 using LeaveManagementWeb.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using NuGet.Versioning;
 
@@ -14,18 +15,21 @@ namespace LeaveManagementWeb.Repositories
         private readonly IMapper mapper;
         private readonly IHttpContextAccessor httpContextAccessor;
         private readonly ILeaveAllocationRepository leaveAllocationRepository;
+        private readonly IEmailSender emailSender;
         private readonly UserManager<Employee> userManager;
 
         public LeaveRequestRepository(ApplicationDbContext context,
             IMapper mapper,
             IHttpContextAccessor httpContextAccessor,
             ILeaveAllocationRepository leaveAllocationRepository,
+            IEmailSender emailSender,
             UserManager<Employee> userManager) : base(context)
         {
             this.context = context;
             this.mapper = mapper;
             this.httpContextAccessor = httpContextAccessor;
             this.leaveAllocationRepository = leaveAllocationRepository;
+            this.emailSender = emailSender;
             this.userManager = userManager;
         }
 
@@ -34,6 +38,12 @@ namespace LeaveManagementWeb.Repositories
             var leaveRequest = await GetAsync(leaveRequestId);
             leaveRequest.Cancelled = true;
             await UpdateAsync(leaveRequest);
+
+            var user = await userManager.FindByIdAsync(leaveRequest.RequestingEmployeeId);
+           
+            await emailSender.SendEmailAsync(user.Email, "Leave Request Canceled",
+                $"Your Leave from" + $"{leaveRequest.StartDate} to {leaveRequest.EndDate} has been Canceled");
+
         }
 
         public async Task ChangeApprovalStatus(int leaveRequestId, bool approved)
@@ -51,6 +61,12 @@ namespace LeaveManagementWeb.Repositories
             }
 
             await UpdateAsync(leaveRequest);
+
+            var user = await userManager.FindByIdAsync(leaveRequest.RequestingEmployeeId);
+            var approvalStatus = approved ? "Approved" : "Declined";
+            
+            await emailSender.SendEmailAsync(user.Email, $"Leave Request {approvalStatus}",
+                $"Your Leave from" + $"{leaveRequest.StartDate} to {leaveRequest.EndDate} has been {approvalStatus}");
         }
 
         public async Task<bool> CreateLeaveRequest(LeaveRequestCreateVM model)
@@ -76,6 +92,8 @@ namespace LeaveManagementWeb.Repositories
             leaveRequest.RequestingEmployeeId = user.Id;
 
             await AddAsync(leaveRequest);
+            await emailSender.SendEmailAsync(user.Email, "Leave Request Submited Successfully", 
+                $"Your Leave from" + $"{leaveRequest.StartDate} to {leaveRequest.EndDate} has been submitted" );
 
             return true;
         }
