@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using LeaveManagementWeb.Data;
-using LeaveManagementWeb.Models;
+using LeaveManagement.Data;
+using LeaveManagement.Common.Models;
 using AutoMapper;
-using LeaveManagementWeb.Contracts;
+using LeaveManagement.Application.Contracts;
 using Microsoft.AspNetCore.Authorization;
-using LeaveManagementWeb.Constants;
-using LeaveManagementWeb.Repositories;
+using LeaveManagement.Common.Constants;
+using LeaveManagement.Application.Repositories;
 
 namespace LeaveManagementWeb.Controllers
 {
@@ -20,11 +20,13 @@ namespace LeaveManagementWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILeaveRequestRepository leaveRequestRepository;
+        private readonly ILogger<LeaveRequestsController> logger;
 
-        public LeaveRequestsController(ApplicationDbContext context, ILeaveRequestRepository leaveRequestRepository)
+        public LeaveRequestsController(ApplicationDbContext context, ILeaveRequestRepository leaveRequestRepository, ILogger<LeaveRequestsController> logger)
         {
             _context = context;
             this.leaveRequestRepository = leaveRequestRepository;
+            this.logger = logger;
         }
 
         [Authorize(Roles = Roles.Administrator)]
@@ -64,7 +66,7 @@ namespace LeaveManagementWeb.Controllers
             }
             catch (Exception ex)
             {
-
+                logger.LogError(ex, "Error Approving Leave Request");
                 throw;
             }
 
@@ -82,7 +84,7 @@ namespace LeaveManagementWeb.Controllers
             }
             catch (Exception ex)
             {
-
+                logger.LogError(ex, "Error Cancelling Leave Request");
                 throw;
             }
 
@@ -121,6 +123,7 @@ namespace LeaveManagementWeb.Controllers
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error Creating Leave Request");
                 ModelState.AddModelError(string.Empty, "An Error Has Ocurred.");
             }
             
