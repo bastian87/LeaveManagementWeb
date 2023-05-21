@@ -2,7 +2,7 @@
 using LeaveManagement.Data;
 using LeaveManagement.Common.Models;
 
-namespace LeaveManagementWeb.Configurations
+namespace LeaveManagement.Application.Configurations
 {
     public class MapperConfig: Profile
     {
